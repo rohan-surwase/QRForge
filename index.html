@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QR Forge — Generate QR Codes</title>
+<meta name="description" content="Generate QR codes for URLs, text, WiFi, and contact cards. Free, no signup, runs entirely in your browser." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+  :root {
+    --ink: #16181D;
+    --ink-soft: #232631;
+    --paper: #F7F5F0;
+    --paper-dim: #ECE9E2;
+    --signal: #1EB8A4;
+    --signal-dim: #16897A;
+    --amber: #E8A33D;
+    --gray: #8B8E96;
+    --line: #D8D4CA;
+    --radius: 2px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  a { color: var(--signal-dim); }
+
+  /* ---------- Header ---------- */
+  header {
+    padding: 28px 32px 20px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .logo {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo .dots {
+    display: grid;
+    grid-template-columns: repeat(3, 6px);
+    grid-template-rows: repeat(3, 6px);
+    gap: 2px;
+  }
+  .logo .dots span { background: var(--ink); display: block; }
+  .logo .dots span:nth-child(2) { background: transparent; }
+  .logo .dots span:nth-child(4) { background: transparent; }
+  .logo .dots span:nth-child(5) { background: var(--signal); }
+  .logo .dots span:nth-child(8) { background: transparent; }
+
+  .tagline {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* ---------- Layout ---------- */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
+    max-width: 1180px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Control panel ---------- */
+  .panel {
+    padding: 36px 40px;
+    border-right: 1px solid var(--line);
+  }
+
+  @media (max-width: 860px) {
+    .panel { border-right: none; border-bottom: 1px solid var(--line); padding: 28px 24px; }
+  }
+
+  .type-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+
+  .type-tab {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 9px 14px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--gray);
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: all 0.15s ease;
+  }
+
+  .type-tab:hover { border-color: var(--ink); color: var(--ink); }
+
+  .type-tab.active {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+
+  .field-group { margin-bottom: 22px; }
+  .field-group.hidden { display: none; }
+
+  label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--gray);
+    margin-bottom: 8px;
+  }
+
+  input[type="text"],
+  input[type="url"],
+  input[type="password"],
+  textarea,
+  select {
+    width: 100%;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    padding: 11px 12px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    border-radius: var(--radius);
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  input::placeholder, textarea::placeholder { color: #B8B5AC; }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--signal);
+  }
+
+  textarea { resize: vertical; min-height: 70px; font-family: 'IBM Plex Mono', monospace; }
+
+  .row { display: flex; gap: 14px; }
+  .row .field-group { flex: 1; }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: -4px;
+  }
+  .checkbox-row input { width: auto; }
+  .checkbox-row label { margin: 0; }
+
+  fieldset.appearance {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-top: 28px;
+  }
+
+  fieldset.appearance legend {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--gray);
+    padding: 0 6px;
+  }
+
+  .color-row { display: flex; gap: 18px; margin-bottom: 16px; }
+  .color-field { flex: 1; display: flex; align-items: center; gap: 10px; }
+  .color-field input[type="color"] {
+    width: 36px; height: 36px; border: 1px solid var(--line);
+    border-radius: var(--radius); cursor: pointer; padding: 2px;
+    background: #fff;
+  }
+  .color-field span { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink); }
+
+  .file-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    border: 1px dashed var(--line);
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    color: var(--gray);
+    width: 100%;
+    justify-content: center;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .file-btn:hover { border-color: var(--signal); color: var(--signal-dim); }
+  .file-btn input { display: none; }
+  .logo-status { font-size: 11px; color: var(--signal-dim); margin-top: 6px; font-family: 'IBM Plex Mono', monospace; }
+
+  .slider-field { margin-top: 16px; }
+  .slider-field .slider-head { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .slider-field .slider-head span:last-child { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink); }
+  input[type="range"] { width: 100%; accent-color: var(--signal); }
+
+  /* ---------- Preview pane ---------- */
+  .preview-pane {
+    background: var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .viewfinder {
+    position: relative;
+    width: 280px;
+    height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .corner {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    border: 2.5px solid var(--signal);
+  }
+  .corner.tl { top: -6px; left: -6px; border-right: none; border-bottom: none; }
+  .corner.tr { top: -6px; right: -6px; border-left: none; border-bottom: none; }
+  .corner.bl { bottom: -6px; left: -6px; border-right: none; border-top: none; }
+  .corner.br { bottom: -6px; right: -6px; border-left: none; border-top: none; }
+
+  #qrcode {
+    background: #fff;
+    padding: 14px;
+    border-radius: 2px;
+    line-height: 0;
+  }
+
+  #qrcode img, #qrcode canvas { display: block; }
+
+  .scan-line {
+    position: absolute;
+    left: 4px; right: 4px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--signal), transparent);
+    top: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .scan-line.sweep {
+    animation: sweep 0.9s ease-in-out;
+  }
+
+  @keyframes sweep {
+    0%   { top: 4%; opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { top: 96%; opacity: 0; }
+  }
+
+  .preview-meta {
+    margin-top: 22px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #6E7280;
+    text-align: center;
+    letter-spacing: 0.03em;
+    max-width: 280px;
+    overflow-wrap: anywhere;
+  }
+
+  .preview-meta .status {
+    color: var(--signal);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .download-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 26px;
+  }
+
+  .btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 11px 18px;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    transition: transform 0.1s ease, opacity 0.15s ease;
+  }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: var(--signal);
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: #2bd1bb; }
+
+  .btn-secondary {
+    background: transparent;
+    color: #ABAEB8;
+    border: 1px solid #3A3E4C;
+  }
+  .btn-secondary:hover { color: #fff; border-color: #6E7280; }
+
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ---------- Footer ---------- */
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 16px 32px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--gray);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .error-msg {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--amber);
+    margin-top: 10px;
+    display: none;
+  }
+  .error-msg.show { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span>
+    QR Forge
+  </div>
+  <div class="tagline">No signup · No server · Runs in your browser</div>
+</header>
+
+<main>
+  <section class="panel">
+
+    <div class="type-tabs">
+      <button class="type-tab active" data-type="text">Text / URL</button>
+      <button class="type-tab" data-type="wifi">WiFi</button>
+      <button class="type-tab" data-type="contact">Contact card</button>
+    </div>
+
+    <!-- TEXT / URL -->
+    <div class="field-group" data-panel="text">
+      <label for="text-input">Text or URL</label>
+      <textarea id="text-input" placeholder="https://example.com or any text"></textarea>
+    </div>
+
+    <!-- WIFI -->
+    <div class="field-group hidden" data-panel="wifi">
+      <label for="wifi-ssid">Network name (SSID)</label>
+      <input type="text" id="wifi-ssid" placeholder="My Wi-Fi network" />
+    </div>
+    <div class="field-group hidden" data-panel="wifi">
+      <label for="wifi-password">Password</label>
+      <input type="text" id="wifi-password" placeholder="Leave blank if open network" />
+    </div>
+    <div class="field-group hidden" data-panel="wifi">
+      <label for="wifi-security">Security type</label>
+      <select id="wifi-security">
+        <option value="WPA">WPA / WPA2</option>
+        <option value="WEP">WEP</option>
+        <option value="nopass">None (open network)</option>
+      </select>
+    </div>
+    <div class="field-group hidden checkbox-row" data-panel="wifi">
+      <input type="checkbox" id="wifi-hidden" />
+      <label for="wifi-hidden" style="margin:0;">Hidden network</label>
+    </div>
+
+    <!-- CONTACT -->
+    <div class="field-group hidden" data-panel="contact">
+      <div class="row">
+        <div class="field-group">
+          <label for="c-first">First name</label>
+          <input type="text" id="c-first" placeholder="Jane" />
+        </div>
+        <div class="field-group">
+          <label for="c-last">Last name</label>
+          <input type="text" id="c-last" placeholder="Doe" />
+        </div>
+      </div>
+    </div>
+    <div class="field-group hidden" data-panel="contact">
+      <label for="c-org">Organization</label>
+      <input type="text" id="c-org" placeholder="Acme Inc." />
+    </div>
+    <div class="field-group hidden" data-panel="contact">
+      <label for="c-phone">Phone</label>
+      <input type="text" id="c-phone" placeholder="+1 555 123 4567" />
+    </div>
+    <div class="field-group hidden" data-panel="contact">
+      <label for="c-email">Email</label>
+      <input type="text" id="c-email" placeholder="jane@example.com" />
+    </div>
+    <div class="field-group hidden" data-panel="contact">
+      <label for="c-url">Website</label>
+      <input type="text" id="c-url" placeholder="https://example.com" />
+    </div>
+
+    <div class="error-msg" id="error-msg"></div>
+
+    <!-- APPEARANCE -->
+    <fieldset class="appearance">
+      <legend>Appearance</legend>
+
+      <div class="color-row">
+        <div class="color-field">
+          <input type="color" id="fg-color" value="#16181D" />
+          <span>Foreground</span>
+        </div>
+        <div class="color-field">
+          <input type="color" id="bg-color" value="#ffffff" />
+          <span>Background</span>
+        </div>
+      </div>
+
+      <div class="slider-field">
+        <div class="slider-head"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:0.07em;">Size</span><span id="size-val">280px</span></div>
+        <input type="range" id="size-slider" min="180" max="500" step="20" value="280" />
+      </div>
+
+      <div style="margin-top:18px;">
+        <label class="file-btn" for="logo-upload">
+          + Add logo overlay (optional)
+          <input type="file" id="logo-upload" accept="image/*" />
+        </label>
+        <div class="logo-status" id="logo-status"></div>
+      </div>
+    </fieldset>
+
+  </section>
+
+  <section class="preview-pane">
+    <div class="viewfinder">
+      <div class="corner tl"></div>
+      <div class="corner tr"></div>
+      <div class="corner bl"></div>
+      <div class="corner br"></div>
+      <div class="scan-line" id="scan-line"></div>
+      <div id="qrcode"></div>
+    </div>
+    <div class="preview-meta">
+      <span class="status" id="status-label">Live preview</span>
+      <span id="meta-text">Start typing to generate your code</span>
+    </div>
+    <div class="download-row">
+      <button class="btn btn-primary" id="download-png">Download PNG</button>
+      <button class="btn btn-secondary" id="download-svg">Download SVG</button>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>QR Forge — generated entirely client-side, nothing leaves your browser</span>
+  <span>v1.0</span>
+</footer>
+
+<script>
+(function() {
+  const tabs = document.querySelectorAll('.type-tab');
+  const panels = document.querySelectorAll('[data-panel]');
+  const errorMsg = document.getElementById('error-msg');
+  const qrContainer = document.getElementById('qrcode');
+  const metaText = document.getElementById('meta-text');
+  const scanLine = document.getElementById('scan-line');
+  const sizeSlider = document.getElementById('size-slider');
+  const sizeVal = document.getElementById('size-val');
+  const fgColor = document.getElementById('fg-color');
+  const bgColor = document.getElementById('bg-color');
+  const logoUpload = document.getElementById('logo-upload');
+  const logoStatus = document.getElementById('logo-status');
+
+  let currentType = 'text';
+  let qr = null;
+  let logoImage = null;
+  let debounceTimer = null;
+
+  // ---------- Tab switching ----------
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentType = tab.dataset.type;
+      panels.forEach(p => {
+        p.classList.toggle('hidden', p.dataset.panel !== currentType);
+      });
+      generate();
+    });
+  });
+
+  // ---------- Build payload string per type ----------
+  function escapeWifi(str) {
+    return str.replace(/([\\;,:"])/g, '\\$1');
+  }
+
+  function buildPayload() {
+    if (currentType === 'text') {
+      return document.getElementById('text-input').value.trim();
+    }
+
+    if (currentType === 'wifi') {
+      const ssid = document.getElementById('wifi-ssid').value.trim();
+      if (!ssid) return '';
+      const password = document.getElementById('wifi-password').value;
+      const security = document.getElementById('wifi-security').value;
+      const hidden = document.getElementById('wifi-hidden').checked;
+      let str = `WIFI:T:${security};S:${escapeWifi(ssid)};`;
+      if (security !== 'nopass' && password) {
+        str += `P:${escapeWifi(password)};`;
+      }
+      if (hidden) str += `H:true;`;
+      str += `;`;
+      return str;
+    }
+
+    if (currentType === 'contact') {
+      const first = document.getElementById('c-first').value.trim();
+      const last = document.getElementById('c-last').value.trim();
+      const org = document.getElementById('c-org').value.trim();
+      const phone = document.getElementById('c-phone').value.trim();
+      const email = document.getElementById('c-email').value.trim();
+      const url = document.getElementById('c-url').value.trim();
+
+      if (!first && !last && !org && !phone && !email) return '';
+
+      let vcard = 'BEGIN:VCARD\nVERSION:3.0\n';
+      vcard += `N:${last};${first};;;\n`;
+      vcard += `FN:${[first, last].filter(Boolean).join(' ')}\n`;
+      if (org) vcard += `ORG:${org}\n`;
+      if (phone) vcard += `TEL:${phone}\n`;
+      if (email) vcard += `EMAIL:${email}\n`;
+      if (url) vcard += `URL:${url}\n`;
+      vcard += 'END:VCARD';
+      return vcard;
+    }
+
+    return '';
+  }
+
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.classList.toggle('show', !!msg);
+  }
+
+  // ---------- Generate ----------
+  function generate(skipAnim) {
+    const payload = buildPayload();
+    qrContainer.innerHTML = '';
+
+    if (!payload) {
+      document.getElementById('status-label').textContent = 'Waiting for input';
+      metaText.textContent = currentType === 'text'
+        ? 'Start typing to generate your code'
+        : currentType === 'wifi'
+          ? 'Enter a network name to generate'
+          : 'Enter at least a name to generate';
+      showError('');
+      toggleDownloads(false);
+      return;
+    }
+
+    if (payload.length > 1800) {
+      showError('That\u2019s a lot of data — QR codes get dense and harder to scan past ~1800 characters.');
+    } else {
+      showError('');
+    }
+
+    const size = parseInt(sizeSlider.value, 10);
+
+    try {
+      qr = new QRCode(qrContainer, {
+        text: payload,
+        width: size,
+        height: size,
+        colorDark: fgColor.value,
+        colorLight: bgColor.value,
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      // overlay logo if present
+      if (logoImage) {
+        setTimeout(() => overlayLogo(size), 60);
+      }
+
+      document.getElementById('status-label').textContent = 'Generated';
+      metaText.textContent = payload.length > 60 ? payload.slice(0, 60) + '…' : payload;
+      toggleDownloads(true);
+
+      if (!skipAnim) {
+        scanLine.classList.remove('sweep');
+        void scanLine.offsetWidth; // restart animation
+        scanLine.classList.add('sweep');
+      }
+    } catch (e) {
+      showError('Could not generate this code — try shortening the input.');
+      toggleDownloads(false);
+    }
+  }
+
+  function overlayLogo(size) {
+    const canvas = qrContainer.querySelector('canvas');
+    if (!canvas || !logoImage) return;
+    const ctx = canvas.getContext('2d');
+    const logoSize = size * 0.22;
+    const x = (size - logoSize) / 2;
+    const y = (size - logoSize) / 2;
+
+    // white backing plate so the logo stays scannable
+    ctx.fillStyle = '#ffffff';
+    const pad = 6;
+    ctx.fillRect(x - pad, y - pad, logoSize + pad * 2, logoSize + pad * 2);
+    ctx.drawImage(logoImage, x, y, logoSize, logoSize);
+  }
+
+  function toggleDownloads(enabled) {
+    document.getElementById('download-png').disabled = !enabled;
+    document.getElementById('download-svg').disabled = !enabled;
+  }
+
+  // ---------- Debounced live input ----------
+  function debouncedGenerate() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(generate, 300);
+  }
+
+  document.querySelectorAll('input[type="text"], input[type="password"], textarea, select').forEach(el => {
+    el.addEventListener('input', debouncedGenerate);
+  });
+  document.getElementById('wifi-hidden').addEventListener('change', debouncedGenerate);
+
+  // ---------- Appearance controls ----------
+  sizeSlider.addEventListener('input', () => {
+    sizeVal.textContent = sizeSlider.value + 'px';
+  });
+  sizeSlider.addEventListener('change', () => generate(true));
+  fgColor.addEventListener('input', () => generate(true));
+  bgColor.addEventListener('input', () => generate(true));
+
+  // ---------- Logo upload ----------
+  logoUpload.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        logoImage = img;
+        logoStatus.textContent = `✓ ${file.name}`;
+        generate(true);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // ---------- Downloads ----------
+  document.getElementById('download-png').addEventListener('click', () => {
+    const canvas = qrContainer.querySelector('canvas');
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = 'qrcode.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  document.getElementById('download-svg').addEventListener('click', () => {
+    const canvas = qrContainer.querySelector('canvas');
+    if (!canvas) return;
+    const size = canvas.width;
+    const dataUrl = canvas.toDataURL('image/png');
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+  <image href="${dataUrl}" width="${size}" height="${size}"/>
+</svg>`;
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = 'qrcode.svg';
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // ---------- Init ----------
+  toggleDownloads(false);
+})();
+</script>
+
+</body>
+</html>
